@@ -1,0 +1,149 @@
+/***************************************************************************
+*=====================      Copyright by Continental AG      ===============
+****************************************************************************
+*
+* Title        : Touchpad Matrix Sensor data convertor
+*
+* Description  : Use pre-generated input file with touchpad sensor data and map it to 
+*                defined co-ordinates.
+*                Write the final data to an output file
+*                   To convert the read sensor format from BR205 in to format BR213. 
+*                   This is needed to use our current Sigma determination. The Sigma Determination works with BR213 format.
+*
+* Responsible  : Komal Kapoor, I ID RD Functional Test
+*                (komal.komal@continental-corporation.com)
+*
+****************************************************************************/
+
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace TouchMatrix_SensorData
+{
+    class TouchMatrix_SensorData
+    {
+        static void Main(string[] args)
+        {
+            //get relative path for input file and read the input file
+            string dir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            //String input = File.ReadAllText (dir + @"input\Sample_Sensordata_Input.txt");
+            string[] filePaths = Directory.GetFiles(dir + @"\input", "*.txt",SearchOption.AllDirectories);
+
+            foreach (string file in filePaths)
+            {
+                string filename = Path.GetFileName(file);
+                //Console.Write(filename);
+                //Thread.Sleep(6000);
+               String input = File.ReadAllText(file);
+                //create an input list from the input file
+                int i = 0, j = 0;
+                //string[,] result = new string[8, 20];
+                List<string> list = new List<string>();
+                foreach (var row in input.Split('\n'))
+                {
+                    j = 0;
+                    foreach (var col in row.Split(' '))
+                    {
+                        if (j < 20)//20cols in input
+                        {
+                            //result[i, j] = col;
+                            list.Add(col);
+                        }
+                        j++;
+                    }
+                    i++;
+                }
+
+                //remove any null or empty element
+                list.Remove("");
+                //convert list to 1-d array
+                string[] arrayNew = list.ToArray();
+
+                //create the output list of list method
+                List<string> sgRow = new List<string>();
+                List<List<string>> Output = new List<List<string>>();
+
+                for (int m = 0; m < 18; m++)
+                {
+                    for (int k = 0; k < 28; k++)
+                    {
+                        sgRow.Add("0x00");//single row filled with the value
+                    }
+                    Output.Add(sgRow);
+                    sgRow = new List<string>();
+                }
+
+                //Remove 0x00 with empty for last 4 elements
+                Output[17][24] = "";
+                Output[17][25] = "";
+                Output[17][26] = "";
+                Output[17][27] = "";
+                //for loop to start the mapping of input file to the output file
+                int counterinput = 0;
+                int outputrow, outputcol = 0;
+
+                for (outputrow = 1; outputrow < 14; outputrow++)//read from 1 to 14
+                {
+                    for (outputcol = 5; outputcol < 22; outputcol += 2)//map from 5th to 22nd.Increment by 2 here
+                    {
+                        //assign input list to the output location breaking to next line from 0-8
+                        Output[outputrow][outputcol] = list[counterinput++];
+                    }
+                }
+
+                //get relative path for input file and write the output file
+                string dir_1 = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                //
+                DirectoryInfo final_output_dir = Directory.CreateDirectory(dir_1 + @"\conv_out");
+                FileStream outputWrite = new FileStream(final_output_dir+@"\conv_"+ filename, FileMode.OpenOrCreate, FileAccess.Write);
+                StreamWriter sr1 = new StreamWriter(outputWrite);
+
+                //create 2 d array od dimension 18*28 and print to outfile
+                string[,] outfile = new string[18, 28];
+
+                for (outputrow = 0; outputrow < 18; outputrow++)
+                {
+                    for (outputcol = 0; outputcol < 28; outputcol++)
+                    {
+                        outfile[outputrow, outputcol] = Output[outputrow][outputcol];
+                    }
+                }
+
+                for (int row = 0; row < 18; row++)
+                {
+                    for (int col = 0; col < 28; col++)
+                    {
+                        sr1.Write(outfile[row, col] + " ");
+                    }
+                    sr1.Write("\r\n");//restrict the output rows
+                }
+                sr1.Flush();
+                //close the file
+                sr1.Close();
+            }
+
+        }
+
+
+
+
+
+
+        //foreach file in FileListPaths
+        //    {
+        //    xxxx(file);
+        //    }
+
+        //  private void outputfilecreater (string path)
+        //  {
+
+        //  }
+
+
+    }
+}
